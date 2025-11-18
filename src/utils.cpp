@@ -8,6 +8,23 @@
 using namespace Rcpp;
 using namespace arma;
 
+arma::mat check_inv_sympd(arma::mat& Lnew, arma::mat& Lold){
+  arma::mat Rnew = Lnew*Lnew.t();
+  arma::mat check(arma::size(Rnew));
+  bool success = arma::inv_sympd(check,Rnew);
+  if(success){
+    return Lnew;
+  } else {
+    return Lold;
+  }
+}
+
+arma::mat vR2Rc(arma::mat& R){
+  arma::mat Is = arma::diagmat(arma::sqrt(1/arma::diagvec(R)));
+  arma::mat out = Is * R * Is;
+  return(out);
+}
+
 arma::mat Z2U(arma::mat& Z){
   const int n = Z.n_rows;
   const int p = Z.n_cols;
@@ -22,23 +39,6 @@ arma::mat Z2U(arma::mat& Z){
 
 // [[Rcpp::export]]
 arma::cube D2C(arma::cube& D){
-  const int p = D.n_rows;
-  const int q = D.n_slices;
-  arma::cube out(arma::size(D));
-  for(int j = 0; j < q; j++){
-    arma::mat Dq = arma::exp(D.slice(j));
-    for(int i = 0; i < p; i++){
-      arma::rowvec Dqi = Dq.row(i);
-      double denp = arma::accu(Dqi);
-      arma::rowvec nump = arma::cumsum(Dqi)/denp;
-      out.slice(j).row(i) = nump;
-    }
-  }
-  return(out);
-}
-
-// [[Rcpp::export]]
-arma::cube D2Cp(arma::cube& D){
   const int p = D.n_rows;
   const int q = D.n_slices;
   arma::cube out(arma::size(D));
@@ -136,10 +136,25 @@ arma::mat ProxL(arma::mat& L){
   int q = L.n_rows;
   arma::mat Lout(q,q);
   for(int i = 0; i < q; i++){
-    double cross = arma::dot(L.row(i),L.row(i));
-    Lout.row(i) = L.row(i)/std::sqrt(cross);
+    double cross = arma::norm(L.row(i),2L);
+    if(cross > 0){
+      Lout.row(i) = L.row(i)/cross;
+    } else {
+      Rcpp::stop("L has norm zero");
+    }
   }
   return(Lout);
+}
+
+arma::mat fixL(arma::mat& Lnew, arma::mat& Lold){
+  int q = Lnew.n_rows;
+  for(int i = 0; i < q; i++){
+    if(!Lnew.row(i).is_finite()) Lnew.row(i) = Lold.row(i);
+    arma::rowvec tmpr = arma::abs(Lnew.row(i) - Lold.row(i));
+    if(arma::any(tmpr > 0.2)) Lnew.row(i) = Lold.row(i);
+  }
+  if(!(Lnew*Lnew.t()).is_sympd()) Lnew = Lold;
+  return(Lnew);
 }
 
 void cube2eye(arma::cube& C){
@@ -193,9 +208,8 @@ arma::mat rmvStNorm(const int n, const int q){
 
 double dmvNorm(arma::vec& y, arma::vec& mu, arma::mat& R, const bool log = true){
   const int q = y.size() ;
-  double lR, sign, out(0.0);
-  bool ok = arma::log_det(lR, sign, R);
-  if(ok) out = -0.5*(q*std::log(2*M_PI) + lR + arma::as_scalar((y - mu).t()*(arma::solve(R, y - mu,arma::solve_opts::likely_sympd)))) ;
+  double lR = arma::log_det_sympd(R);
+  double out = -0.5*(q*std::log(2*M_PI) + lR + arma::as_scalar((y - mu).t()*(arma::solve(R, y - mu,arma::solve_opts::likely_sympd)))) ;
   if(log) return(out);
   else return(std::exp(out));
 }
@@ -209,6 +223,14 @@ arma::mat dmvStNorm(arma::mat& Z){
       out(m,j) = R::dnorm(Z(m,j),0.0,1.0,0);
     }
   }
+  return (out);
+}
+
+arma::mat Z2Zo(arma::mat& Z, arma::vec& mu, arma::mat& Lt){
+  const int n = Z.n_rows;
+  arma::mat iL = arma::inv(arma::trimatu(Lt));
+  arma::mat muV = arma::repmat(mu, 1, n).t();
+  arma::mat out = (Z - muV) * iL;
   return (out);
 }
 
@@ -291,16 +313,10 @@ Rcpp::List genpar(const int p, const int q, const int tp,
         tD(span(1,tDRcpp.size())) = arma::sort(Rcpp::as<arma::rowvec>(tDRcpp));
         tD = arma::diff(tD);
         D.slice(k).row(j) = tD;
-        // Rcpp::NumericVector tDRcpp = Rcpp::rnorm(tp-1L, 0.0, 2.0); //THIS START
-        // arma::rowvec tD0 = Rcpp::as<arma::rowvec>(tDRcpp);
-        // arma::rowvec tD1(tp);
-        // tD1(arma::span(0,tp-2L)) = tD0;
-        // D.slice(k).row(j) = tD1; // THIS END
       }
     }
   }
-  // if(basis != "is") C = D2C(D);
-  if(basis != "is") C = D2Cp(D);
+  if(basis != "is") C = D2C(D);
   return Rcpp::List::create(Rcpp::Named("A") = A,
                             Rcpp::Named("C") = C,
                             Rcpp::Named("D") = D);
@@ -342,6 +358,7 @@ arma::mat genpar_aCDM(arma::mat& Qmatrix, const double maxG0, const double maxSl
   return(G);
 }
 
+// [[Rcpp::export]]
 arma::cube SpU_isp(arma::mat& U, arma::vec& knots, const unsigned int deg){
   const arma::vec bouK = {0.0,1.0};
   const int n = U.n_rows;
@@ -360,6 +377,7 @@ arma::cube SpU_isp(arma::mat& U, arma::vec& knots, const unsigned int deg){
   return(out)  ;
 }
 
+// [[Rcpp::export]]
 arma::cube SpU_bsp(arma::mat& U, arma::vec& knots, const unsigned int deg){
   const arma::vec bouK = {0.0,1.0};
   const int n = U.n_rows;
@@ -378,6 +396,7 @@ arma::cube SpU_bsp(arma::mat& U, arma::vec& knots, const unsigned int deg){
   return(out)  ;
 }
 
+// [[Rcpp::export]]
 arma::mat prob(arma::mat& A, arma::cube& C, arma::mat& ism){
   const int n = ism.n_rows;
   const int p = A.n_rows;
@@ -472,7 +491,8 @@ arma::mat fz_IS(arma::mat& Z, arma::mat& pM, arma::cube& pR){
 
 Rcpp::List d1AC(arma::mat& Y, arma::mat& PI, arma::mat& ism,
                 arma::mat& A, arma::cube& C){
-  arma::mat YmPI = (Y - PI)/(PI % (1-PI));
+  arma::mat PIm1PI = PI % (1-PI);
+  arma::mat YmPI = (Y - PI)/(PIm1PI.clamp(arma::datum::eps, 1.0));
   const int p = YmPI.n_cols;
   const int q = C.n_slices;
   const int np = C.n_cols;
@@ -525,29 +545,29 @@ Rcpp::List d1AC(arma::mat& Y, arma::mat& PI, arma::mat& ism,
 //                             Rcpp::Named("iC") = iC);
 // }
 
+// arma::mat d1CdD(arma::vec& d){
+//   const int tp = d.n_elem;
+//   arma::vec expd = arma::exp(d);
+//   arma::mat d1(tp,tp);
+//   arma::vec N = arma::cumsum(expd);
+//   double D = arma::accu(expd);
+//
+//   arma::mat expDM(tp,tp);
+//   expDM.each_col() = expd;
+//   arma::mat Nm(tp,tp);
+//   Nm.each_row() = N.t();
+//   arma::mat DmN = D - Nm;
+//   Nm %= expDM;
+//   DmN %= expDM;
+//   arma::uvec iLm = arma::trimatl_ind(arma::size(d1),-1);
+//   arma::uvec iUm = arma::trimatu_ind(arma::size(d1));
+//   d1(iUm) = DmN(iUm);
+//   d1(iLm) = -Nm(iLm);
+//
+//   return(d1/std::pow(D,2));
+// }
+
 arma::mat d1CdD(arma::vec& d){
-  const int tp = d.n_elem;
-  arma::vec expd = arma::exp(d);
-  arma::mat d1(tp,tp);
-  arma::vec N = arma::cumsum(expd);
-  double D = arma::accu(expd);
-
-  arma::mat expDM(tp,tp);
-  expDM.each_col() = expd;
-  arma::mat Nm(tp,tp);
-  Nm.each_row() = N.t();
-  arma::mat DmN = D - Nm;
-  Nm %= expDM;
-  DmN %= expDM;
-  arma::uvec iLm = arma::trimatl_ind(arma::size(d1),-1);
-  arma::uvec iUm = arma::trimatu_ind(arma::size(d1));
-  d1(iUm) = DmN(iUm);
-  d1(iLm) = -Nm(iLm);
-
-  return(d1/std::pow(D,2));
-}
-
-arma::mat d1CdDp(arma::vec& d){
   int tp = d.n_elem;
   arma::mat out(tp,tp);
   arma::uvec iO = arma::trimatl_ind(arma::size(out));
@@ -604,7 +624,8 @@ Rcpp::List dCdD(arma::vec& d){
 
 Rcpp::List d1AD(arma::mat& Y, arma::mat& PI, arma::mat& ism,
                 arma::mat& A, arma::cube& D){
-  arma::mat YmPI = (Y - PI)/(PI % (1-PI));
+  arma::mat PIm1PI = PI % (1-PI);
+  arma::mat YmPI = (Y - PI)/(PIm1PI.clamp(arma::datum::eps, 1.0));
   const int p = YmPI.n_cols;
   const int q = D.n_slices;
   const int np = D.n_cols;
@@ -624,10 +645,9 @@ Rcpp::List d1AD(arma::mat& Y, arma::mat& PI, arma::mat& ism,
       arma::uvec idC = iC.slice(j).row(i).t();
       out(idA) = arma::as_scalar(YmPIcol.elem(noNA).t() * (ism(noNA,jcols)*(C.slice(j).row(i)).t()));
       arma::vec Dij = D.slice(j).row(i).t();
-      // arma::mat dD1 = d1CdD(Dij);
-      arma::mat dD1 = d1CdDp(Dij);
+      arma::mat dD1 = d1CdD(Dij).t();
       arma::vec V1 = ism(noNA,jcols).t() * YmPIcol.elem(noNA);
-      arma::vec V2 = (dD1.t() * V1);
+      arma::vec V2 = (dD1 * V1);
       out(idC) = A(i,j) * V2 ;
     }
   }
@@ -638,7 +658,8 @@ Rcpp::List d1AD(arma::mat& Y, arma::mat& PI, arma::mat& ism,
 
 Rcpp::List dAD(arma::mat& Y, arma::mat& PI, arma::mat& ism,
                arma::mat& A, arma::cube& D){
-  arma::mat YmPI = (Y - PI)/(PI % (1-PI));
+  arma::mat PIm1PI = PI % (1-PI);
+  arma::mat YmPI = (Y - PI)/(PIm1PI.clamp(arma::datum::eps, 1.0));
   arma::mat YmPI2 = (-(arma::pow(PI,2) - 2.0*(PI%Y) + Y)/(arma::pow(PI-1,2)%arma::pow(PI,2)));
   const int p = YmPI.n_cols;
   const int q = D.n_slices;
@@ -682,12 +703,12 @@ Rcpp::List dAD(arma::mat& Y, arma::mat& PI, arma::mat& ism,
                             Rcpp::Named("iD") = iC);
 }
 
-arma::cube d1PIdZ(arma::mat& A, arma::cube& C, arma::mat& isd, arma::mat& Z){
+arma::cube d1PIdZ(arma::mat& A, arma::cube& C, arma::mat& isd, arma::mat& Z, arma::mat& sM){
   const int p = A.n_rows;
   const int q = C.n_slices;
   const int n = isd.n_rows;
   const int np = C.n_cols;
-  arma::mat dZ = dmvStNorm(Z);
+  arma::mat dZ = dmvStNorm(Z) * sM;
   arma::cube out(n,q,p);
   for(int i = 0; i < p; i++){
     for(int j = 0; j < q; j++){
@@ -697,39 +718,32 @@ arma::cube d1PIdZ(arma::mat& A, arma::cube& C, arma::mat& isd, arma::mat& Z){
   return(out);
 }
 
-arma::cube d1PIdZ_aCDM(arma::mat& G, arma::mat& Qmatrix, arma::mat& Z, arma::mat& Apat){
+arma::cube d1PIdZ_aCDM(arma::mat& G, arma::mat& Z, arma::mat& sM){
   const int p = G.n_rows;
   const int q = Z.n_cols;
   const int n = Z.n_rows;
-  const int K = Apat.n_rows;
-  arma::mat dZ = dmvStNorm(Z);
-  arma::mat U = Z2U(Z);
-  arma::mat UpA = UA(U,Apat);
-  arma::vec c1(K, arma::fill::value(1.0));
-  arma::mat Apat1 = arma::join_rows(c1,Apat);
+  arma::mat dZ = dmvStNorm(Z) * sM;
   arma::cube out(n,q,p);
+  arma::uvec iGi = arma::regspace<arma::uvec>(1, G.n_cols-1);
   for(int i = 0; i < p; i++){
     arma::rowvec Gi = G.row(i);
-    for(int k = 0; k < K; k++){
-      arma::rowvec Ak = Apat.row(k);
-      arma::mat dUAt = dUA(U,Ak);
-      arma::mat tUpA(size(U));
-      tUpA.each_col() = UpA.col(k);
-      double PIAj = arma::as_scalar(Apat1.row(k) * Gi.t());
-      out.slice(i) += PIAj * tUpA % dUAt % dZ;
-    }
+    arma::mat tG(arma::size(Z));
+    tG.each_row() = Gi(iGi).t();
+    out.slice(i) = (tG % dZ) ;
   }
   return(out);
 }
 
 arma::mat d1PostZ(arma::mat& YmPI, arma::mat& Z, arma::mat& isd,
-                  arma::mat& A, arma::cube& C, arma::vec& mu, arma::mat& R){
+                  arma::mat& A, arma::cube& C, arma::vec& mu, arma::mat& L){
   const int n = YmPI.n_rows;
   const int p = YmPI.n_cols;
   const int q = C.n_slices;
   arma::mat out(n,q);
-  arma::mat iR = arma::inv_sympd(R, arma::inv_opts::allow_approx);
-  arma::cube dpidz = d1PIdZ(A,C,isd,Z);
+  arma::mat Ri = L * L.t();
+  arma::mat sM = arma::diagmat(arma::sqrt(arma::diagvec(Ri)));
+  arma::mat iR = arma::inv_sympd(Ri);
+  arma::cube dpidz = d1PIdZ(A,C,isd,Z,sM);
   for(int i = 0; i < p; i++){
     arma::mat temp = dpidz.slice(i).each_col() % YmPI.col(i);
     for(int j = 0; j < q; j++){
@@ -745,20 +759,16 @@ arma::mat d1PostZ(arma::mat& YmPI, arma::mat& Z, arma::mat& isd,
   return(out);
 }
 
-arma::mat prob_aCDM(arma::mat& G, arma::mat& U, arma::mat& Apat){
+// [[Rcpp::export]]
+arma::mat prob_aCDM(arma::mat& G, arma::mat& U){
   const int n = U.n_rows;
   const int p = G.n_rows;
-  const int K = Apat.n_rows;
-  arma::mat UpA = UA(U,Apat);
-  arma::vec c1(K, arma::fill::value(1.0));
-  arma::mat Apat1 = arma::join_rows(c1,Apat);
+  arma::vec c1(n, arma::fill::value(1.0));
+  arma::mat U1 = arma::join_rows(c1,U);
   arma::mat out(n,p, arma::fill::zeros);
   for(int i = 0; i < p; i++){
     arma::rowvec Gi = G.row(i);
-    for(int k = 0; k < K; k++){
-      double PIAj = arma::as_scalar(Apat1.row(k) * Gi.t());
-      out.col(i) += PIAj * UpA.col(k);
-    }
+    out.col(i) = U1 * Gi.t();
   }
   return(out);
 }
@@ -795,29 +805,18 @@ arma::mat prob_aCDM(arma::mat& G, arma::mat& U, arma::mat& Apat){
 //   return(mllk);
 // }
 
-Rcpp::List d1G(arma::mat& Y, arma::mat& U, arma::mat& PI, arma::mat& G,
-               arma::mat& Apat, arma::mat& Qmatrix){
-  arma::mat YmPI = (Y - PI)/(PI % (1-PI));
+Rcpp::List d1G(arma::mat& Y, arma::mat& U, arma::mat& PI, arma::mat& G){
+  arma::mat PIm1PI = PI % (1-PI);
+  arma::mat YmPI = (Y - PI)/(PIm1PI.clamp(arma::datum::eps, 1.0));
   const int p = Y.n_cols;
-  const int tp = G.n_cols;
-  const int K = Apat.n_rows;
-  arma::mat UpA = UA(U,Apat);
+  const int n = Y.n_rows;
+  arma::vec c1(n, arma::fill::value(1.0));
+  arma::mat U1 = arma::join_rows(c1,U);
   arma::mat tout(arma::size(G));
-  arma::rowvec IAkQi(tp);
-  IAkQi(0) = 1;
   for(int i = 0; i < p; i++){
-    arma::rowvec Gi = G.row(i);
-    arma::rowvec Qi = Qmatrix.row(i);
     arma::vec YmPIcol = YmPI.col(i);
     arma::uvec noNA = arma::find_finite(YmPIcol);
-    for(int k = 0; k < K; k++){
-      arma::rowvec Ak = Apat.row(k);
-      arma::vec UpAk = UpA.col(k);
-      arma::rowvec tAkQi = Ak % Qi;
-      IAkQi.subvec(1, arma::size(tAkQi)) = tAkQi;
-      double trick = arma::as_scalar(YmPIcol.elem(noNA).t() * UpAk.elem(noNA));
-      tout.row(i) += trick * IAkQi;
-    }
+    tout.row(i) = YmPIcol.elem(noNA).t() * U1.rows(noNA);
   }
   arma::vec out = arma::vectorise(tout);
   arma::uvec ig = arma::regspace<arma::uvec>(0, tout.size());
@@ -826,17 +825,17 @@ Rcpp::List d1G(arma::mat& Y, arma::mat& U, arma::mat& PI, arma::mat& G,
                             Rcpp::Named("iG") = iG);
 }
 
-arma::mat d1PostZ_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z, arma::mat& Qmatrix, arma::mat& Apat,
-                           arma::mat& G, arma::vec& mu, arma::mat& R){
-  arma::mat YmPI = (Y - PI)/(PI % (1-PI));
+arma::mat d1PostZ_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z,
+                       arma::mat& G, arma::vec& mu, arma::mat& L){
+  arma::mat PIm1PI = PI % (1-PI);
+  arma::mat YmPI = (Y - PI)/(PIm1PI.clamp(arma::datum::eps, 1.0));
   const int p = Y.n_cols;
   const int n = Y.n_rows;
   const int q = mu.n_elem;
-  arma::mat U = Z2U(Z);
-  arma::mat UpA = UA(U,Apat);
   arma::mat out(n,q);
-  arma::mat iR = arma::inv_sympd(R, arma::inv_opts::allow_approx);
-  arma::cube dpidz = d1PIdZ_aCDM(G,Qmatrix,Z,Apat);
+  arma::mat Ri = L * L.t();
+  arma::mat sM = arma::diagmat(arma::sqrt(arma::diagvec(Ri)));
+  arma::cube dpidz = d1PIdZ_aCDM(G,Z,sM);
   for(int i = 0; i < p; i++){
     arma::mat temp = dpidz.slice(i).each_col() % YmPI.col(i);
     for(int j = 0; j < q; j++){
@@ -846,8 +845,8 @@ arma::mat d1PostZ_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z, arma::mat& Qma
       }
     }
   }
-  arma::mat Zcent(Z);
-  Zcent.each_row() -= mu.t();
-  out -= Zcent*iR;
+  arma::mat Lt = L.t();
+  arma::mat Zo = Z2Zo(Z, mu, Lt) ;
+  out -= Zo;
   return(out);
 }

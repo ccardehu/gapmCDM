@@ -13,7 +13,7 @@ apmCDM(data, q, control = list(), start.par = NULL, ...)
 
 \item{control}{List of control parameters (see 'Details').}
 
-\item{start.par}{(optional) For simulation use. List of size 4 with starting model parameters (A, C, D, R).}
+\item{start.par}{(optional) For simulation use. List of size 4 with starting model parameters (G, mu, R).}
 
 \item{...}{Further arguments to be passed to \code{control}.}
 }
@@ -23,7 +23,7 @@ A list with components:
 \item \code{G}: A matrix \code{(p x (q+1))} of estimated parameters.
 \item \code{mu}: An vector \code{(q x 1)} of estimated latent variable means.
 \item \code{R}: A matrix \code{(q x q)} of estimated correlations for the latent variables
-\item \code{llk}: Marginal log-likelihood (computed via Monte-Carlo integration) evaluated at \code{A}, \code{C}, and \code{R}.
+\item \code{llk}: Marginal log-likelihood (computed via Monte-Carlo integration) evaluated at \code{G}, \code{mu}, and \code{R}.
 \item \code{AIC}: Akaike information criterion for the estimated model.
 \item \code{BIC}: Bayesian (Schwarz) information criterion for the estimated model.
 \item \code{cdllk.trace}: (if return.trace = T) A matrix \code{(iter x 2)} with the trace for the observed variables and latent variables log-likelihood.

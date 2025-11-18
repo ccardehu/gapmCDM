@@ -22,6 +22,8 @@ Rcpp::List newAC_PGD(Rcpp::List& d1AC, arma::mat& Aold, arma::mat& Qmatrix,
          arma::vec tA = (Aold.row(i).t() + ssA*d1ac(idA)) % Qmatrix.row(i).t();
          Anew.row(i) = ProxD(tA).t();
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -34,6 +36,8 @@ Rcpp::List newAC_PGD(Rcpp::List& d1AC, arma::mat& Aold, arma::mat& Qmatrix,
             Cnew.slice(j).row(i) = Cold.slice(j).row(i);
          }
          if(!Cnew.slice(j).row(i).is_finite()) Cnew.slice(j).row(i) = Cold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Cnew.slice(j).row(i) - Cold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Cnew.slice(j).row(i) = Cold.slice(j).row(i);
       }
    }
    return Rcpp::List::create(Rcpp::Named("A") = Anew,
@@ -56,6 +60,8 @@ Rcpp::List newAD_PGD(Rcpp::List& d1AD,arma::mat& Aold, arma::mat& Qmatrix,
          arma::vec tA = (Aold.row(i).t() + ssA*d1ad(idA)) % Qmatrix.row(i).t();
          Anew.row(i) = ProxD(tA).t();
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -68,6 +74,8 @@ Rcpp::List newAD_PGD(Rcpp::List& d1AD,arma::mat& Aold, arma::mat& Qmatrix,
             Dnew.slice(j).row(i) = Dold.slice(j).row(i);
          }
          if(!Dnew.slice(j).row(i).is_finite()) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Dnew.slice(j).row(i) - Dold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
       }
    }
    return Rcpp::List::create(Rcpp::Named("A") = Anew,
@@ -90,6 +98,8 @@ Rcpp::List newAC_MD(Rcpp::List& d1AC,arma::mat& Aold, arma::mat& Qmatrix,
          const double l1A = arma::sum(arma::abs(tA));
          Anew.row(i) = arma::clamp(tA.t() / l1A, 0.0, 1.0);
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -99,6 +109,8 @@ Rcpp::List newAC_MD(Rcpp::List& d1AC,arma::mat& Aold, arma::mat& Qmatrix,
          const double l1C = arma::sum(arma::abs(tC));
          Cnew.slice(j).row(i) = arma::clamp(tC.t() / l1C, 0.0, 1.0);
          if(!Cnew.slice(j).row(i).is_finite()) Cnew.slice(j).row(i) = Cold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Cnew.slice(j).row(i) - Cold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Cnew.slice(j).row(i) = Cold.slice(j).row(i);
       }
    }
    return Rcpp::List::create(Rcpp::Named("A") = Anew,
@@ -121,6 +133,8 @@ Rcpp::List newAD_MD(Rcpp::List& d1AD,arma::mat& Aold, arma::mat& Qmatrix,
          const double l1A = arma::sum(arma::abs(tA));
          Anew.row(i) = arma::clamp(tA.t() / l1A, 0.0, 1.0);
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -133,6 +147,8 @@ Rcpp::List newAD_MD(Rcpp::List& d1AD,arma::mat& Aold, arma::mat& Qmatrix,
             Dnew.slice(j).row(i) = Dold.slice(j).row(i);
          }
          if(!Dnew.slice(j).row(i).is_finite()) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Dnew.slice(j).row(i) - Dold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
       }
    }
    return Rcpp::List::create(Rcpp::Named("A") = Anew,
@@ -155,6 +171,8 @@ Rcpp::List newAD_MDp(Rcpp::List& d1AD,arma::mat& Aold, arma::mat& Qmatrix,
          const double l1A = arma::sum(arma::abs(tA));
          Anew.row(i) = arma::clamp(tA.t() / l1A, 0.0, 1.0);
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -164,6 +182,8 @@ Rcpp::List newAD_MDp(Rcpp::List& d1AD,arma::mat& Aold, arma::mat& Qmatrix,
          const double l1D = arma::sum(arma::abs(tD));
          Dnew.slice(j).row(i) = arma::clamp(tD.t() / l1D, 0.0, 1.0);
          if(!Dnew.slice(j).row(i).is_finite()) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Dnew.slice(j).row(i) - Dold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
       }
    }
    return Rcpp::List::create(Rcpp::Named("A") = Anew,
@@ -189,6 +209,8 @@ Rcpp::List newAD_MD_hess(Rcpp::List& d1AD, arma::mat& Aold, arma::mat& Qmatrix,
          const double l1A = arma::sum(arma::abs(tA));
          Anew.row(i) = arma::clamp(tA.t() / l1A, 0.0, 1.0);
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -201,6 +223,8 @@ Rcpp::List newAD_MD_hess(Rcpp::List& d1AD, arma::mat& Aold, arma::mat& Qmatrix,
             Dnew.slice(j).row(i) = Dold.slice(j).row(i);
          }
          if(!Dnew.slice(j).row(i).is_finite()) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Dnew.slice(j).row(i) - Dold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
       }
    }
    return Rcpp::List::create(Rcpp::Named("A") = Anew,
@@ -230,6 +254,8 @@ Rcpp::List newAD_MD_adam(Rcpp::List& d1AD,arma::mat& Aold,arma::mat& Qmatrix,
          const double l1A = arma::sum(arma::abs(tA));
          Anew.row(i) = arma::clamp(tA.t() / l1A, 0.0, 1.0);
          if(!Anew.row(i).is_finite()) Anew.row(i) = Aold.row(i);
+         arma::rowvec tmpr = arma::abs(Anew.row(i) - Aold.row(i));
+         if(arma::any(tmpr > 0.2)) Anew.row(i) = Aold.row(i);
       } else {
          Anew.row(i) = Aold.row(i);
       }
@@ -242,6 +268,8 @@ Rcpp::List newAD_MD_adam(Rcpp::List& d1AD,arma::mat& Aold,arma::mat& Qmatrix,
             Dnew.slice(j).row(i) = Dold.slice(j).row(i);
          }
          if(!Dnew.slice(j).row(i).is_finite()) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
+         arma::rowvec tmpr = arma::abs(Dnew.slice(j).row(i) - Dold.slice(j).row(i));
+         if(arma::any(tmpr > 0.2)) Dnew.slice(j).row(i) = Dold.slice(j).row(i);
       }
    }
    mt = mtN;
@@ -254,7 +282,7 @@ arma::vec newM(arma::vec& mu, arma::mat& R, arma::mat& Z, double& ss){
    const int np = mu.size();
    const int n = Z.n_rows;
    arma::vec gM(np, arma::fill::zeros);
-   arma::mat iR = arma::inv_sympd(R, arma::inv_opts::allow_approx);
+   arma::mat iR = arma::inv_sympd(R);
    for(int i = 0; i < n; i++){
       gM += iR*(Z.row(i) - mu.t()).t();
    }
@@ -264,7 +292,7 @@ arma::vec newM(arma::vec& mu, arma::mat& R, arma::mat& Z, double& ss){
 
 arma::mat newL(arma::vec& mu, arma::mat& L, arma::mat& Z, double& ss, bool cor){
    const int n = Z.n_rows;
-   const int q = L.n_rows;
+   const int q = mu.n_elem;
    arma::uvec idL = arma::trimatl_ind(arma::size(L));
    arma::vec vL = L(idL);
    arma::uvec iL;
@@ -278,7 +306,7 @@ arma::mat newL(arma::vec& mu, arma::mat& L, arma::mat& Z, double& ss, bool cor){
    const int np = vL.size();
    arma::vec gL(np);
    arma::mat Ri = L*L.t();
-   arma::mat iR = arma::inv_sympd(Ri, arma::inv_opts::allow_approx);
+   arma::mat iR = arma::inv_sympd(Ri);
 
    for(int i = 0; i < np; i++){
       arma::uword iLi = idL(i);
@@ -293,11 +321,61 @@ arma::mat newL(arma::vec& mu, arma::mat& L, arma::mat& Z, double& ss, bool cor){
       gL(i) = g1 + g2;
    }
    vL += ss*gL;
-   L(idL) = vL;
+   arma::mat Lnew(L);
+   Lnew(idL) = vL;
    if(cor){
-      L = ProxL(L);
+      Lnew = ProxL(Lnew);
    }
-   return(L);
+   return(Lnew);
+}
+
+arma::mat newL_adam(arma::vec& mu, arma::mat& L, arma::mat& Z, double& ss, bool cor,
+                    int iter, arma::vec& mt, arma::vec& vt, Rcpp::List& control){
+   const int n = Z.n_rows;
+   const int q = mu.n_elem;
+
+   double b1 = control["adam.b1"];
+   double b2 = control["adam.b2"];
+
+   arma::uvec idL = arma::trimatl_ind(arma::size(L));
+   arma::vec vL = L(idL);
+   arma::uvec iL;
+   if(cor){
+      iL = arma::regspace<arma::uvec>(1,idL.n_elem-1);
+   } else {
+      iL = arma::regspace<arma::uvec>(0,idL.n_elem-1);
+   }
+   idL = idL(iL);
+   vL = vL(iL);
+   const int np = vL.size();
+   arma::vec gL(np);
+   arma::mat Ri = L*L.t();
+   arma::mat iR = arma::inv_sympd(Ri);
+
+   for(int i = 0; i < np; i++){
+      arma::uword iLi = idL(i);
+      arma::mat Djk(q,q);
+      Djk(iLi) = 1;
+      arma::mat Gjk = iR*Djk*L.t()*iR;
+      double g1 = -n*arma::trace(L.t()*iR*Djk);
+      double g2 = 0;
+      for(int m = 0; m < n; m++){
+         g2 += arma::as_scalar((Z.row(m)-mu.t())*Gjk*(Z.row(m)-mu.t()).t());
+      }
+      gL(i) = g1 + g2;
+   }
+
+   arma::vec mtN = b1*mt + (1-b1)*gL;
+   arma::vec vtN = b2*vt + (1-b2)*arma::pow(gL,2);
+   arma::vec gLADAM = (mtN/(1-std::pow(b1,iter))) / (arma::pow(vtN/(1-std::pow(b2,iter)),0.5) + std::sqrt(arma::datum::eps));
+
+   vL += ss*gLADAM;
+   arma::mat Lnew(L);
+   Lnew(idL) = vL;
+   if(cor){
+      Lnew = ProxL(Lnew);
+   }
+   return(Lnew);
 }
 
 void newpMR(arma::mat& Z, arma::mat& posM, arma::cube& posR, int iter){
@@ -317,29 +395,31 @@ void newpMR(arma::mat& Z, arma::mat& posM, arma::cube& posR, int iter){
 }
 
 arma::mat newZ_ULA(arma::mat& Y, arma::mat& PI,arma::mat& Z, arma::mat& A, arma::cube& C,
-                   arma::vec& mu, arma::mat& R,
+                   arma::vec& mu, arma::mat& L,
                    arma::mat& isd, double& h){
-   arma::mat YmPIo = (Y - PI)/(PI % (1-PI));
+   arma::mat PIm1PI = PI % (1-PI);
+   arma::mat YmPIo = (Y - PI)/(PIm1PI.clamp(arma::datum::eps, 1.0));
    const int n = YmPIo.n_rows;
-   const int q = R.n_cols;
-   arma::mat gpz = d1PostZ(YmPIo,Z,isd,A,C,mu,R);
+   const int q = L.n_cols;
+   arma::mat gpz = d1PostZ(YmPIo,Z,isd,A,C,mu,L);
    arma::mat rE = rmvStNorm(n,q);
    arma::mat Zn = Z + h*gpz + std::sqrt(2*h)*rE;
    return(Zn);
 }
 
 arma::mat newZ_MALA(arma::mat& Y, arma::mat& PI,arma::mat& Z, arma::mat& A, arma::cube& C,
-                    arma::vec& mu, arma::mat& R, double& ar,
+                    arma::vec& mu, arma::mat& L, double& ar,
                     arma::mat& isd, double& h, arma::vec& knots, const unsigned int degree,
                     const std::string& basis){
-   arma::mat YmPIo = (Y - PI)/(PI % (1-PI));
+   arma::mat YmPIo = (Y - PI)/((PI % (1-PI))+1e-8);
    const int n = YmPIo.n_rows;
-   const int q = R.n_cols;
+   const int q = L.n_cols;
    const int np = knots.size() + degree ;
    arma::mat spM(n,q*np), spD(n,q*np);
    arma::cube spObj(n,q*np,2);
+   arma::mat R = L * L.t();
 
-   arma::mat gpz = d1PostZ(YmPIo,Z,isd,A,C,mu,R);
+   arma::mat gpz = d1PostZ(YmPIo,Z,isd,A,C,mu,L);
    arma::mat rE = rmvStNorm(n,q);
    arma::mat Zn = Z + h*gpz + std::sqrt(2*h)*rE;
 
@@ -356,8 +436,9 @@ arma::mat newZ_MALA(arma::mat& Y, arma::mat& PI,arma::mat& Z, arma::mat& A, arma
    arma::mat PIn = prob(A,C,spM);
    arma::vec pdo = arma::sum(fyz(Y,PI),1) + arma::sum(fz(Z,mu,R),1);
    arma::vec pdn = arma::sum(fyz(Y,PIn),1) + arma::sum(fz(Zn,mu,R),1);
-   arma::mat YmPIn = (Y - PIn)/(PIn % (1-PIn));
-   arma::mat gpzn = d1PostZ(YmPIn,Zn,spD,A,C,mu,R);
+   arma::mat PIm1PI = PIn % (1-PIn);
+   arma::mat YmPIn = (Y - PIn)/(PIm1PI.clamp(arma::datum::eps, 1.0));
+   arma::mat gpzn = d1PostZ(YmPIn,Zn,spD,A,C,mu,L);
    arma::vec qo = -1/(4*h) * arma::pow(arma::vecnorm(Z - Zn - h*gpzn,2,1),2);
    arma::vec qn = -1/(4*h) * arma::pow(arma::vecnorm(Zn - Z - h*gpz,2,1),2);
    arma::vec rejV = pdn + qo - pdo - qn;
@@ -377,16 +458,18 @@ arma::mat newZ_MALA(arma::mat& Y, arma::mat& PI,arma::mat& Z, arma::mat& A, arma
 }
 
 arma::mat newZ_RWMH(arma::mat& Y, arma::mat& PI,arma::mat& Z, arma::mat& A, arma::cube& C,
-                    arma::vec& mu, arma::mat& R, double& ar,
+                    arma::vec& mu, arma::mat& L, double& ar,
                     const double h, arma::vec& knots, const unsigned int degree, const std::string& basis){
    const int n = Y.n_rows;
-   const int q = R.n_cols;
+   const int q = L.n_cols;
    const int np = knots.size() + degree ;
    arma::mat spM(n,q*np);
    arma::cube spObj(n,q*np,2);
+   arma::mat R = L*L.t();
 
-   arma::mat hD = h*arma::eye(arma::size(R));
-   arma::mat rE = rmvNorm(n,mu,hD);
+   arma::mat hD = h*arma::eye(arma::size(L));
+   arma::vec mu0(q);
+   arma::mat rE = rmvNorm(n,mu0,hD);
    arma::mat Zn = Z + rE;
 
    arma::mat Un = Z2U(Zn);
@@ -487,27 +570,29 @@ arma::mat newG_PL2_adam(Rcpp::List& d1G,arma::mat& Gold, double& ss,
    return(Gnew);
 }
 
-arma::mat newZ_ULA_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z, arma::mat& Qmatrix, arma::mat& Apat,
-                        arma::mat& G, arma::vec& mu, arma::mat& R, double& h){
+arma::mat newZ_ULA_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z,
+                        arma::mat& G, arma::vec& mu, arma::mat& L, double& h){
    const int n = Y.n_rows;
    const int q = mu.n_elem;
-   arma::mat gpz = d1PostZ_aCDM(Y,PI,Z,Qmatrix,Apat,G,mu,R);
+   arma::mat gpz = d1PostZ_aCDM(Y,PI,Z,G,mu,L);
    arma::mat rE = rmvStNorm(n,q);
    arma::mat Zn = Z + h*gpz + std::sqrt(2*h)*rE;
    return(Zn);
 }
 
 arma::mat newZ_RWMH_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z,
-                         arma::mat& G, arma::mat& Apat,
-                         arma::vec& mu, arma::mat& R, const double h, double& ar){
+                         arma::mat& G, arma::vec& mu, arma::mat& L, const double h, double& ar){
    const int n = Y.n_rows;
+   arma::mat R = L*L.t();
+   const int q = L.n_rows;
 
-   arma::mat hD = h*arma::eye(arma::size(R));
-   arma::mat rE = rmvNorm(n,mu,hD);
+   arma::mat hD = h*arma::eye(arma::size(L));
+   arma::vec mu0(q);
+   arma::mat rE = rmvNorm(n,mu0,hD);
    arma::mat Zn = Z + rE;
-   arma::mat Un = Z2U(Zn);
 
-   arma::mat PIn = prob_aCDM(G,Un,Apat);
+   arma::mat Un = Z2U(Zn);
+   arma::mat PIn = prob_aCDM(G,Un);
    arma::vec pdo = arma::sum(fyz(Y,PI),1) + arma::sum(fz(Z,mu,R),1);
    arma::vec pdn = arma::sum(fyz(Y,PIn),1) + arma::sum(fz(Zn,mu,R),1);
 
@@ -525,21 +610,22 @@ arma::mat newZ_RWMH_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z,
    return Zout;
 }
 
-arma::mat newZ_MALA_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z, arma::mat& Qmatrix, arma::mat& Apat,
-                         arma::mat& G, arma::vec& mu, arma::mat& R, double& h, double& ar){
+arma::mat newZ_MALA_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z,
+                         arma::mat& G, arma::vec& mu, arma::mat& L, double& h, double& ar){
    const int n = Y.n_rows;
    const int q = mu.n_elem;
+   arma::mat R = L*L.t();
 
-   arma::mat gpz = d1PostZ_aCDM(Y,PI,Z,Qmatrix,Apat,G,mu,R);
+   arma::mat gpz = d1PostZ_aCDM(Y,PI,Z,G,mu,L);
    arma::mat rE = rmvStNorm(n,q);
    arma::mat Zn = Z + h*gpz + std::sqrt(2*h)*rE;
    arma::mat Un = Z2U(Zn);
 
-   arma::mat PIn = prob_aCDM(G,Un,Apat);
+   arma::mat PIn = prob_aCDM(G,Un);
    arma::vec pdo = arma::sum(fyz(Y,PI),1) + arma::sum(fz(Z,mu,R),1);
    arma::vec pdn = arma::sum(fyz(Y,PIn),1) + arma::sum(fz(Zn,mu,R),1);
 
-   arma::mat gpzn = d1PostZ_aCDM(Y,PIn,Zn,Qmatrix,Apat,G,mu,R);
+   arma::mat gpzn = d1PostZ_aCDM(Y,PIn,Zn,G,mu,L);
    arma::vec qo = -1/(4*h) * arma::pow(arma::vecnorm(Z - Zn - h*gpzn,2,1),2);
    arma::vec qn = -1/(4*h) * arma::pow(arma::vecnorm(Zn - Z - h*gpz,2,1),2);
    arma::vec rejV = pdn + qo - pdo - qn;
@@ -560,7 +646,7 @@ arma::mat newZ_MALA_aCDM(arma::mat& Y, arma::mat& PI, arma::mat& Z, arma::mat& Q
 
 // [[Rcpp::export]]
 double fy_gapmCDM_IS(arma::mat& Y, arma::mat& A, arma::cube& C,
-                     arma::vec& mu, arma::mat& R, arma::mat& Z,
+                     arma::vec& mu, arma::mat& L, arma::mat& Z,
                      arma::mat& pM, arma::cube& pR, Rcpp::List& control){
 
    const unsigned int degree = control["degree"];
@@ -575,6 +661,7 @@ double fy_gapmCDM_IS(arma::mat& Y, arma::mat& A, arma::cube& C,
    double mllk = 0;
    arma::mat Eobj(n,nsim);
    arma::mat Zsim(Z);
+   arma::mat R = L*L.t();
    arma::mat isMo(n,R.n_cols * C.n_cols);
    arma::mat isDo(n,R.n_cols * C.n_cols);
    arma::cube spObj(n,R.n_cols * C.n_cols,2);
@@ -583,8 +670,7 @@ double fy_gapmCDM_IS(arma::mat& Y, arma::mat& A, arma::cube& C,
    int n1 = pR.n_slices;
    double ar = 0;
    if(n != n1){
-      Zsim.set_size(n,q);
-      Zsim.fill(0.0);
+      Zsim.randn(n,q);
       pM.set_size(n,q);
       pM.fill(0.0);
       arma::mat pMi(arma::size(pM));
@@ -612,13 +698,13 @@ double fy_gapmCDM_IS(arma::mat& Y, arma::mat& A, arma::cube& C,
          arma::mat Zn(arma::size(Zsam));
          if(sampler == "ULA"){
             ssZ = h * std::pow(ii,-.333);
-            Zn = newZ_ULA(Y,piH,Zsam,A,C,mu,R,isDo,ssZ);
+            Zn = newZ_ULA(Y,piH,Zsam,A,C,mu,L,isDo,ssZ);
          } else if(sampler == "MALA"){
             ssZ = h * std::pow(q,-.333);
-            Zn = newZ_MALA(Y,piH,Zsam,A,C,mu,R,ar,isDo,ssZ,knots,degree,basis);
+            Zn = newZ_MALA(Y,piH,Zsam,A,C,mu,L,ar,isDo,ssZ,knots,degree,basis);
          } else if(sampler == "RWMH"){
             ssZ = h * std::pow(q,-1);
-            Zn = newZ_RWMH(Y,piH,Zsam,A,C,mu,R,ar,ssZ,knots,degree,basis);
+            Zn = newZ_RWMH(Y,piH,Zsam,A,C,mu,L,ar,ssZ,knots,degree,basis);
          }
          newpMR(Zn,pMi,pRi,ii);
          Zsam = Zn;
@@ -679,8 +765,8 @@ double fy_gapmCDM_IS(arma::mat& Y, arma::mat& A, arma::cube& C,
 }
 
 // [[Rcpp::export]]
-double fy_aCDM_IS(arma::mat& Y, arma::mat& G, arma::mat& Qmatrix, arma::mat& Apat,
-                  arma::vec& mu, arma::mat& R, arma::mat& Z,
+double fy_aCDM_IS(arma::mat& Y, arma::mat& G,
+                  arma::vec& mu, arma::mat& L, arma::mat& Z,
                   arma::mat& pM, arma::cube& pR, Rcpp::List& control){
 
    const int nsim = control["nsim"];
@@ -692,13 +778,15 @@ double fy_aCDM_IS(arma::mat& Y, arma::mat& G, arma::mat& Qmatrix, arma::mat& Apa
    double mllk = 0;
    arma::mat Eobj(n,nsim);
    arma::mat Zsim(Z);
+   arma::mat R = L * L.t();
 
    const int q = R.n_rows;
    int n1 = pR.n_slices;
    double ar = 0;
    if(n != n1){
-      Zsim.set_size(n,q);
-      Zsim.fill(0.0);
+      Zsim.randn(n,q);
+      // Zsim.set_size(n,q);
+      // Zsim.fill(0.0);
       pM.set_size(n,q);
       pM.fill(0.0);
       arma::mat pMi(arma::size(pM));
@@ -713,17 +801,17 @@ double fy_aCDM_IS(arma::mat& Y, arma::mat& G, arma::mat& Qmatrix, arma::mat& Apa
       for(int ii = 1; ii <= nsim; ii++){
          if (ii % 2 == 0) Rcpp::checkUserInterrupt();
          arma::mat Usam = Z2U(Zsam);
-         arma::mat piH = prob_aCDM(G,Usam,Apat);
+         arma::mat piH = prob_aCDM(G,Usam);
          arma::mat Zn(arma::size(Zsam));
          if(sampler == "ULA"){
             ssZ = h * std::pow(ii,-.333);
-            Zn = newZ_ULA_aCDM(Y,piH,Zsam,Qmatrix,Apat,G,mu,R,ssZ);
+            Zn = newZ_ULA_aCDM(Y,piH,Zsam,G,mu,L,ssZ);
          } else if(sampler == "MALA"){
             ssZ = h * std::pow(q,-.333);
-            Zn = newZ_MALA_aCDM(Y,piH,Zsam,Qmatrix,Apat,G,mu,R,ssZ,ar);
+            Zn = newZ_MALA_aCDM(Y,piH,Zsam,G,mu,L,ssZ,ar);
          } else if(sampler == "RWMH"){
             ssZ = h * std::pow(q,-1);
-            Zn = newZ_RWMH_aCDM(Y,piH,Zsam,G,Apat,mu,R,ssZ,ar);
+            Zn = newZ_RWMH_aCDM(Y,piH,Zsam,G,mu,L,ssZ,ar);
          }
          newpMR(Zn,pMi,pRi,ii);
          Zsam = Zn;
@@ -760,7 +848,7 @@ double fy_aCDM_IS(arma::mat& Y, arma::mat& G, arma::mat& Qmatrix, arma::mat& Apa
       if (ii % 2 == 0) Rcpp::checkUserInterrupt();
       if(verbose & (ii % every == 0)) Rcpp::Rcout << "\r Calculating marginal log-likelihood (via IS, iteration: " << std::setw(5) << ii << ") ... ";
       arma::mat Usim = Z2U(Zsim);
-      arma::mat piH = prob_aCDM(G,Usim,Apat);
+      arma::mat piH = prob_aCDM(G,Usim);
       Eobj.col(ii) = arma::sum(fyz(Y,piH),1) + fz(Zsim,mu,R) - fz_IS(Zsim,pM,pRf);
       Zsim = rmvNorm_IS(pM,pRf);
    }
@@ -772,46 +860,6 @@ double fy_aCDM_IS(arma::mat& Y, arma::mat& G, arma::mat& Qmatrix, arma::mat& Apa
    arma::mat EEobj = arma::exp(Eobj);
    arma::vec V1 = arma::log(arma::sum(EEobj,1));
    mllk = arma::accu(V1) + arma::accu(maxEobj) - n*std::log(nsim);
-   if(verbose) Rcpp::Rcout << "\r Calculating marginal log-likelihood (via IS, iter: " << std::setw(5) << nsim << ") ... (m-llk: " << std::to_string(mllk) << ")";
+   if(verbose) Rcpp::Rcout << "\r Calculating marginal log-likelihood (via IS, iteration: " << std::setw(5) << nsim << ") ... (m-llk: " << std::to_string(mllk) << ")";
    return(mllk);
 }
-
-// // [[Rcpp::export]]
-// arma::vec ISE_gaVSga(arma::mat& A1, arma::cube& C1,
-//                      arma::mat& A0, arma::cube& C0,
-//                      arma::vec& mu1, arma::mat& R1,
-//                      arma::vec& mu0, arma::mat& R0,
-//                      Rcpp::List& control){
-//
-//    const unsigned int degree = control["degree"];
-//    const int nsim = control["nsim"];
-//    arma::vec knots = control["knots"];
-//    const bool verbose = control["verbose"];
-//    const int every = control["verbose.every"];
-//    const std::string basis = Rcpp::as<std::string>(control["basis"]);
-//    const std::string sampler = Rcpp::as<std::string>(control["sampler"]);
-//
-//    const int q = R0.n_rows;
-//    arma::vec mus(q);
-//    arma::vec out;
-//    arma::mat Rsim = R0 + arma::eye(q,q);
-//    arma::mat Zsim = rmvNorm(nsim,mu0,Rsim);
-//    arma::mat isMo(nsim,R0.n_cols * C0.n_cols);
-//    arma::mat isDo(nsim,R0.n_cols * C0.n_cols);
-//    arma::cube spObj(nsim,R0.n_cols * C0.n_cols,2);
-//
-//    if(verbose) Rcpp::Rcout << "\n Calculating Integrated Squared Error ... ";
-//    arma::mat Usim = Z2U(Zsim);
-//    if(basis == "is"){
-//       spObj = SpU_isp(Usim,knots,degree);
-//       isMo = spObj.slice(0);
-//    } else {
-//       spObj = SpU_bsp(Usim,knots,degree);
-//       isMo = spObj.slice(0);
-//    }
-//    arma::mat piH1 = prob(A1,C1,isMo);
-//    arma::mat piH0 = prob(A0,C0,isMo);
-//    out = arma::mean(arma::pow(piH1 - piH0,2),0);
-//    if(verbose) Rcpp::Rcout << "\r Calculating marginal log-likelihood ... (Done)";
-//    return(out);
-// }

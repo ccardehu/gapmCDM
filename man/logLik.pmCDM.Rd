@@ -14,9 +14,9 @@
 \item{control}{List for importance sampling options (\code{nsim})}
 }
 \value{
-A list with components:
+A double:
 \itemize{
-\item \code{llk}: Marginal log-likelihood (computed via Monte-Carlo integration) evaluated at \code{A}, \code{C}, and \code{R}.
+\item \code{llk}: Marginal log-likelihood (computed via Monte-Carlo integration) on \code{Y} evaluated at estimated parameters.
 }
 }
 \description{

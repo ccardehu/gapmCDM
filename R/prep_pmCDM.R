@@ -11,7 +11,8 @@ pr_control_gaCDM <- function(control, ...){
               "seed" = NULL, "mu" = NULL, "R" = NULL, "sampler" = "ULA",
               "start.zn" = "fa", "start.zn.test" = "random",
               "window" = 10, "stop.atconv" = T,
-              "algorithm" = "GD", "adam.b1" = .9, "adam.b2" = .999)
+              "algorithm" = "GD", "adam.b1" = .9, "adam.b2" = .999,
+              "sa.power" = -.51, "cv.useFitPos" = T)
   control <- c(control, list(...))
   namC <- names(con)
   con[(namc <- names(control))] <- control
@@ -33,7 +34,8 @@ pr_control_aCDM <- function(control, ...){
               "start.zn" = "fa", "start.zn.test" = "random",
               "window" = 10, "stop.atconv" = T,
               "damp.factor" = 1,
-              "algorithm" = "GD", "adam.b1" = .9, "adam.b2" = .999)
+              "algorithm" = "GD", "adam.b1" = .9, "adam.b2" = .999,
+              "sa.power" = -.51, "cv.useFitPos" = T)
   control <- c(control, list(...))
   namC <- names(con)
   con[(namc <- names(control))] <- control
@@ -78,8 +80,7 @@ pr_param_gaCDM <- function(p,q,tp,sim = F,control){
       if(control$basis == "is"){
         Cs <- array(1/tp,dim = c(p,tp,q))
       } else {
-        # Cs <- D2C(Ds)
-        Cs <- D2Cp(Ds)
+        Cs <- D2C(Ds)
       }
       Rs <- diag(q)
       mu <- rep(0,q)
